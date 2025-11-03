@@ -1,0 +1,26 @@
+name: analyse_plaintes
+description: Application d'analyse de plaintes avec IA
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  supabase_flutter: ^2.1.1
+  http: ^1.1.0
+  # ✅ Version compatible rétrogradée pour résoudre l'erreur "doesn't match any versions"
+  google_generative_ai: ^0.4.7 
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
