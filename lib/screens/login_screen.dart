@@ -134,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
         keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
         decoration: InputDecoration(
           labelText: labelText,
-          prefixIcon: Icon(icon, color: primaryDarkGreen), // ⬅️ Utilisation du nouveau vert très foncé
+          prefixIcon: Icon(icon, color: primaryDarkGreen),
           // Style de la bordure
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryDarkGreen, width: 2), // ⬅️ Utilisation du nouveau vert très foncé
+            borderSide: BorderSide(color: primaryDarkGreen, width: 2),
           ),
           filled: true,
           fillColor: Colors.white, // Fond blanc
@@ -180,138 +180,145 @@ class _LoginScreenState extends State<LoginScreen> {
             height: screenHeight * 0.4, // Le dégradé occupe le haut de l'écran
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryDarkGreen, mediumGreen], // ⬅️ Nouveau dégradé plus sombre
+                colors: [primaryDarkGreen, mediumGreen], // Nouveau dégradé plus sombre
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
             ),
           ),
+          
           // 2. Contenu Centré (Formulaire)
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 50.0),
-              child: Column(
-                children: [
-                  // --- Logo/Icône de l'Application ---
-                  Icon(
-                    _isSignUp ? Icons.how_to_reg : Icons.lock_open,
-                    size: 80,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _isSignUp ? "Créer votre Espace" : "Bienvenue",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
+              // ⭐️ Contrainte de largeur pour centrer le formulaire sur les grands écrans
+              child: ConstrainedBox( 
+                constraints: const BoxConstraints(
+                  maxWidth: 450, // Largeur maximale pour le formulaire
+                ),
+                child: Column(
+                  children: [
+                    // --- Logo/Icône de l'Application ---
+                    Icon(
+                      _isSignUp ? Icons.how_to_reg : Icons.lock_open,
+                      size: 80,
                       color: Colors.white,
                     ),
-                  ),
-                  const SizedBox(height: 30),
-
-                  // --- Carte du Formulaire (plus stylée) ---
-                  Card(
-                    elevation: 15, // Ombre marquée
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(30.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // --- Titre du Formulaire ---
-                          Text(
-                            _isSignUp ? "INSCRIPTION" : "CONNEXION",
-                            style: TextStyle(
-                              fontSize: 22, 
-                              fontWeight: FontWeight.bold, 
-                              color: primaryDarkGreen // ⬅️ Utilisation du nouveau vert très foncé
-                            ),
-                          ),
-                          const Divider(height: 25, thickness: 1.5),
-                          
-                          // --- Champs du Formulaire ---
-                          if (_isSignUp) ...[
-                            _buildTextField(
-                              controller: _fullNameController,
-                              labelText: "Nom complet",
-                              icon: Icons.person_outline,
-                            ),
-                          ],
-                          
-                          _buildTextField(
-                            controller: _emailController,
-                            labelText: "Email",
-                            icon: Icons.email_outlined,
-                            isEmail: true,
-                          ),
-                          
-                          _buildTextField(
-                            controller: _passwordController,
-                            labelText: "Mot de passe",
-                            icon: Icons.lock_outline,
-                            isPassword: true,
-                          ),
-                          
-                          if (_isSignUp) ...[
-                            _buildTextField(
-                              controller: _confirmPasswordController,
-                              labelText: "Confirmer le mot de passe",
-                              icon: Icons.lock_reset,
-                              isConfirmPassword: true,
-                            ),
-                          ],
-                          
-                          const SizedBox(height: 20),
-                          
-                          // --- Bouton Soumettre ---
-                          _isLoading
-                              ? CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(primaryDarkGreen), // ⬅️ Utilisation du nouveau vert très foncé
-                                )
-                              : ElevatedButton(
-                                  onPressed: _submit,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryDarkGreen, // ⬅️ Utilisation du nouveau vert très foncé
-                                    foregroundColor: Colors.white,
-                                    minimumSize: const Size(double.infinity, 55),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 8, // Ombre sur le bouton
-                                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                  ),
-                                  child: Text(_isSignUp ? "S'INSCRIRE" : "SE CONNECTER"),
-                                ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // --- Lien de Bascule ---
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _isSignUp = !_isSignUp;
-                                // Nettoyage des champs non utilisés lors du basculement
-                                if (!_isSignUp) {
-                                  _fullNameController.clear();
-                                  _confirmPasswordController.clear();
-                                }
-                              });
-                            },
-                            child: Text(
-                              _isSignUp
-                                  ? "Déjà un compte ? Connectez-vous"
-                                  : "Pas de compte ? Créez-en un ici",
-                              style: TextStyle(
-                                color: primaryDarkGreen, // ⬅️ Utilisation du nouveau vert très foncé
-                                fontWeight: FontWeight.bold
-                              ),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 10),
+                    Text(
+                      _isSignUp ? "Créer votre Espace" : "Bienvenue",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 30),
+
+                    // --- Carte du Formulaire (plus stylée) ---
+                    Card(
+                      elevation: 15, // Ombre marquée
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(30.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // --- Titre du Formulaire ---
+                            Text(
+                              _isSignUp ? "INSCRIPTION" : "CONNEXION",
+                              style: TextStyle(
+                                fontSize: 22, 
+                                fontWeight: FontWeight.bold, 
+                                color: primaryDarkGreen
+                              ),
+                            ),
+                            const Divider(height: 25, thickness: 1.5),
+                            
+                            // --- Champs du Formulaire ---
+                            if (_isSignUp) ...[
+                              _buildTextField(
+                                controller: _fullNameController,
+                                labelText: "Nom complet",
+                                icon: Icons.person_outline,
+                              ),
+                            ],
+                            
+                            _buildTextField(
+                              controller: _emailController,
+                              labelText: "Email",
+                              icon: Icons.email_outlined,
+                              isEmail: true,
+                            ),
+                            
+                            _buildTextField(
+                              controller: _passwordController,
+                              labelText: "Mot de passe",
+                              icon: Icons.lock_outline,
+                              isPassword: true,
+                            ),
+                            
+                            if (_isSignUp) ...[
+                              _buildTextField(
+                                controller: _confirmPasswordController,
+                                labelText: "Confirmer le mot de passe",
+                                icon: Icons.lock_reset,
+                                isConfirmPassword: true,
+                              ),
+                            ],
+                            
+                            const SizedBox(height: 20),
+                            
+                            // --- Bouton Soumettre ---
+                            _isLoading
+                                ? CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(primaryDarkGreen),
+                                  )
+                                : ElevatedButton(
+                                    onPressed: _submit,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryDarkGreen,
+                                      foregroundColor: Colors.white,
+                                      minimumSize: const Size(double.infinity, 55),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 8, // Ombre sur le bouton
+                                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    ),
+                                    child: Text(_isSignUp ? "S'INSCRIRE" : "SE CONNECTER"),
+                                  ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // --- Lien de Bascule ---
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isSignUp = !_isSignUp;
+                                  // Nettoyage des champs non utilisés lors du basculement
+                                  if (!_isSignUp) {
+                                    _fullNameController.clear();
+                                    _confirmPasswordController.clear();
+                                  }
+                                });
+                              },
+                              child: Text(
+                                _isSignUp
+                                    ? "Déjà un compte ? Connectez-vous"
+                                    : "Pas de compte ? Créez-en un ici",
+                                style: TextStyle(
+                                  color: primaryDarkGreen,
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

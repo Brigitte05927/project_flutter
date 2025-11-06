@@ -31,10 +31,8 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _conversation = [];
   bool _isLoading = false;
-  // Nouvel état pour indiquer si le chargement initial est terminé
-  bool _isHistoryLoaded = false; 
 
-  // Définition des couleurs du thème Vert
+  // Définition des couleurs du thème Vert (ajusté pour la clarté)
   static final Color primaryDarkGreen = Colors.green.shade900!; 
   static final Color mediumGreen = Colors.green.shade700!;    
   static final Color lightGreen = Colors.green.shade300!;     
@@ -44,80 +42,58 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _loadInitialData(); // Charge l'historique et le message initial
   }
   
-  // 🏆 FONCTION CORRIGÉE POUR L'HISTORIQUE SANS INTERRUPTION
+  // Fonction combinée pour charger l'historique et le message initial
   Future<void> _loadInitialData() async {
-    _conversation.clear();
-    setState(() {
-      _isLoading = true; 
-      _isHistoryLoaded = false;
-    });
+    // 1. Charger l'historique depuis Supabase
+    final history = await _legalService.getChatHistory();
     
-    try {
-      // Le service récupère l'historique du plus récent au plus ancien
-      final history = await _legalService.getChatHistory();
-      final List<ChatMessage> loadedMessages = [];
-      
-      // Traiter l'historique pour garantir l'ordre Utilisateur -> AI
-      for (var chat in history) {
-          DateTime chatTime;
-          try {
-              chatTime = DateTime.parse(chat['created_at'] as String).toLocal();
-          } catch (_) {
-              chatTime = DateTime.now().subtract(const Duration(hours: 1)); 
-          }
+    // Mappe les messages de l'historique (Note: l'historique ne stocke que la réponse IA)
+    final List<ChatMessage> loadedMessages = history.map((chat) {
+      // Nous insérons deux messages pour simuler l'historique complet (Question Utilisateur puis Réponse AI)
+      final List<ChatMessage> pair = [];
 
-          // Message AI : +1ms garantit qu'il est affiché CHRONOLOGIQUEMENT APRÈS le message utilisateur
-          loadedMessages.add(ChatMessage(
-              content: chat['ai_response'] as String,
-              type: 'ai',
-              time: chatTime.add(const Duration(milliseconds: 1)), 
-              sources: (chat['sources'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-              suggestions: const [], 
-          ));
-
-          // Message utilisateur : Temps original
-          if (chat['user_message'] is String && (chat['user_message'] as String).isNotEmpty) {
-              loadedMessages.add(ChatMessage(
-                  content: chat['user_message'] as String,
-                  type: 'user',
-                  time: chatTime,
-              ));
-          }
-      }
-
-      _conversation.addAll(loadedMessages);
-      // Tri final (du plus récent au plus ancien, car reverse: true)
-      _conversation.sort((a, b) => b.time.compareTo(a.time)); 
-
-      // Ajouter le message de bienvenue (uniquement si l'historique est vide)
-      if (_conversation.isEmpty) {
-         // Le message de bienvenue doit être le PLUS ANCIEN, donc ajouté à la fin pour une ListView inversée
-         _conversation.add(ChatMessage( 
-          content: "Bonjour ! Je suis votre Assistant Juridique IA (RAG). Posez-moi une question sur le droit du Burundi.",
-          type: 'ai',
-          time: DateTime.now().subtract(const Duration(days: 365)), // Temps très ancien
-          suggestions: ['licenciement abusif', 'garde d\'enfants', 'causes de suspension du contrat de travail'],
+      // Message utilisateur (basé sur le user_message sauvegardé)
+      if (chat['user_message'] is String && (chat['user_message'] as String).isNotEmpty) {
+        pair.add(ChatMessage(
+          content: chat['user_message'] as String,
+          type: 'user',
+          time: DateTime.parse(chat['created_at'] as String),
         ));
       }
-      
-    } catch (e) {
-      // Gérer l'erreur de chargement de l'historique (pour que l'utilisateur puisse quand même chatter)
-       _conversation.add(ChatMessage(
-        content: "Erreur de chargement de l'historique (les nouvelles discussions fonctionneront) : ${e.toString()}",
-        type: 'error',
-        time: DateTime.now().subtract(const Duration(seconds: 1)),
+
+      // Réponse AI
+      // NOTE IMPORTANTE: L'historique Supabase ne stocke pas les 'suggestions'
+      pair.add(ChatMessage(
+        content: chat['ai_response'] as String,
+        type: 'ai',
+        time: DateTime.parse(chat['created_at'] as String),
+        sources: (chat['sources'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+        suggestions: const [], 
       ));
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isHistoryLoaded = true;
-        });
-        _scrollToTop();
-      }
+      
+      return pair;
+    }).expand((i) => i).toList(); // Aplatit la liste de paires de messages
+
+    _conversation.addAll(loadedMessages); 
+    // Tri par temps pour s'assurer que l'ordre est correct (le plus récent en haut)
+    _conversation.sort((a, b) => b.time.compareTo(a.time)); 
+
+    // 3. Ajouter le message de bienvenue (uniquement si l'historique est vide)
+    if (_conversation.isEmpty) {
+       _conversation.insert(0, ChatMessage(
+        content: "Bonjour ! Je suis votre Assistant Juridique IA (RAG) du Burundi. Posez-moi une question sur le droit du travail, de la famille, ou tout autre domaine de mes documents.",
+        type: 'ai',
+        time: DateTime.now(),
+        suggestions: ['licenciement abusif', 'garde d\'enfants', 'causes de suspension du contrat de travail'],
+      ));
+    }
+    
+    if (mounted) {
+      setState(() {});
+      _scrollToTop();
     }
   }
 
@@ -127,22 +103,13 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
     if (userMessage.isEmpty || _isLoading) return;
 
     _messageController.clear();
-    final messageTime = DateTime.now();
 
     // 1. Ajouter le message utilisateur
     setState(() {
       _conversation.insert(0, ChatMessage(
         content: userMessage,
         type: 'user',
-        time: messageTime,
-      ));
-      // Ajouter un message 'typing' temporaire pour l'UX (position 0)
-      _conversation.insert(0, ChatMessage(
-        content: 'L\'Assistant Juridique est en train de rédiger la réponse...',
-        type: 'ai',
-        time: messageTime.add(const Duration(microseconds: 1)),
-        sources: const [],
-        suggestions: const [],
+        time: DateTime.now(),
       ));
       _isLoading = true;
     });
@@ -153,32 +120,27 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
       // 2. Obtenir la réponse de l'IA
       final responseData = await _legalService.getLegalAdvice(userMessage);
       
-      // 3. Remplacer le message temporaire par la réponse finale
+      // Assurer la conversion de la liste de suggestions
+      final sources = (responseData['sources'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+      final suggestions = (responseData['suggestions'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+      
+      // 3. Ajouter la réponse de l'IA
       setState(() {
-        // Retirer le message 'typing' (toujours à la position 0)
-        if(_conversation.isNotEmpty && _conversation.first.content.contains('rédiger la réponse')) {
-             _conversation.removeAt(0);
-        }
-        
-        // Insérer la réponse AI finale
         _conversation.insert(0, ChatMessage(
           content: responseData['response'] as String,
           type: 'ai',
-          sources: (responseData['sources'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-          suggestions: (responseData['suggestions'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-          time: messageTime.add(const Duration(milliseconds: 1)), // Assure l'ordre
+          sources: sources,
+          suggestions: suggestions,
+          time: DateTime.now(),
         ));
       });
     } catch (e) {
-      // 4. Gérer l'erreur (Retirer le typing et insérer l'erreur)
+      // 4. Ajouter le message d'erreur
       setState(() {
-        if(_conversation.isNotEmpty && _conversation.first.content.contains('rédiger la réponse')) {
-             _conversation.removeAt(0); // Retirer le message 'typing'
-        }
         _conversation.insert(0, ChatMessage(
-          content: 'Désolé, une erreur est survenue: ${e.toString().replaceAll('Exception: ', '')}. Vérifiez votre connexion ou l\'API.',
+          content: 'Désolé, une erreur est survenue: ${e.toString().replaceAll('Exception: ', '')}',
           type: 'error',
-          time: messageTime.add(const Duration(milliseconds: 1)),
+          time: DateTime.now(),
         ));
       });
     } finally {
@@ -205,7 +167,6 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
 
   // --- WIDGET POUR UNE BULLE DE MESSAGE ---
   Widget _buildMessage(ChatMessage message) {
-    // ... [Le reste du widget reste le même, il est déjà excellent]
     final isUser = message.type == 'user';
     final isError = message.type == 'error';
     final isAI = message.type == 'ai';
@@ -221,17 +182,10 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Icône AI 
-          if (isAI && !isError) 
+          if (isAI) 
             CircleAvatar(
               backgroundColor: lightGreen.withOpacity(0.5),
               child: Icon(Icons.gavel, color: primaryDarkGreen, size: 20),
-            ),
-          
-          // Icône Erreur
-          if (isError) 
-            const CircleAvatar(
-              backgroundColor: Colors.red,
-              child: Icon(Icons.warning_amber, color: Colors.white, size: 20),
             ),
 
           Column(
@@ -262,7 +216,7 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
               if (isAI && message.sources.isNotEmpty)
                 _buildSourcesSection(message.sources, isUser),
               
-              // 3. Suggestions (pour l'IA uniquement)
+              // 3. Suggestions (pour l'IA uniquement) - C'EST LA CLEF POUR CONTINUER LA CONVERSATION
               if (isAI && message.suggestions.isNotEmpty)
                 _buildSuggestionChips(message.suggestions),
 
@@ -326,6 +280,7 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
         spacing: 6.0,
         runSpacing: 4.0,
         children: suggestions.map((text) => GestureDetector(
+          // 🏆 Action : Appelle _sendMessage avec le texte de la suggestion
           onTap: _isLoading ? null : () => _sendMessage(quickQuestion: text),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -373,7 +328,6 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
                   hintText: "Posez votre question juridique...",
                 ),
                 textCapitalization: TextCapitalization.sentences,
-                enabled: _isHistoryLoaded, // Désactiver la saisie si le chat n'est pas chargé
               ),
             ),
           ),
@@ -385,7 +339,7 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
                 SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: primaryDarkGreen)) 
                 : const Icon(Icons.send),
               color: primaryDarkGreen, 
-              onPressed: (_isLoading || !_isHistoryLoaded) ? null : () => _sendMessage(),
+              onPressed: _isLoading ? null : () => _sendMessage(),
             ),
           ),
         ],
@@ -406,16 +360,7 @@ class _LegalAssistantScreenState extends State<LegalAssistantScreen> {
         children: [
           // Liste des messages (Zone de Chat)
           Flexible(
-            child: !_isHistoryLoaded && _isLoading
-              ? Center(child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: primaryDarkGreen),
-                    const SizedBox(height: 10),
-                    const Text("Chargement de l'historique...", style: TextStyle(color: Colors.grey)),
-                  ],
-                ))
-              : ListView.builder(
+            child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(8.0),
               reverse: true, // Affiche les nouveaux messages en haut
